@@ -6,13 +6,22 @@ AN = 'an'
 THE = 'the'  # specific article
 articles = (A, AN, THE)
 
+AM = 'am'
 IS = 'is'
 ARE = 'are'
+WAS = 'was'
+WERE = 'were'
+BE = 'be'
+BEING = 'being'
+BEEN = 'been'
 HAS = 'has'
+HAVE = 'have'
+HAD = 'had'
 
-verbs = (IS, ARE, HAS)
+verbs = (AM, IS, ARE, WAS, WERE, BE, BEING, BEEN, HAS, HAVE, HAD)
 
 WHAT = 'what'  # query operator
+DOES = 'does'
 
 OF = 'of'
 
@@ -83,6 +92,7 @@ class Talk:
                 self.handle_verb(obj, subj, verb)
             elif sentence_type == INTERROGATIVE:
                 query = words[0].lower()
+                # what is
                 if query == WHAT and verb == IS:
                     obj = filter_articles(words[verb_index + 1:])
                     # case: "b of a"
@@ -97,6 +107,15 @@ class Talk:
                     else:
                         result = getattr(getattr(self, obj[2]), obj[0])
                         self.print(result)
+                # does a have b
+                elif query == DOES and verb == HAVE:
+                    subj = words[verb_index - 1]
+                    obj = filter_articles(words[verb_index + 1:])
+                    result = hasattr(getattr(self, subj), obj[0])
+                    if result:
+                        self.print("yes")
+                    else:
+                        self.print("no")
 
     def handle_verb(self, obj, subj, verb):
         if verb == IS:
