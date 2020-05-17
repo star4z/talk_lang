@@ -42,7 +42,7 @@ class Talk:
         self.talk(line)
 
     def talk(self, line):
-        # This needs to be improved because the punctuation is helpful for determining sentence structure.
+        # Sentences are determined by punctuation, not lines, so ignore line breaks.
         line = ''.join(line.split('\n'))
         # Stores the index of the beginning character of the current sentence.
         last_end = 0
@@ -68,7 +68,7 @@ class Talk:
     def sentence(self, sentence, sentence_type):
         words = [word for word in sentence.split(' ') if word]
         verb_index = next((i for i, word in enumerate(words) if word in verbs), None)
-        if verb_index != None:
+        if verb_index is not None:
             verb = words[verb_index]
             if sentence_type == DECLARATIVE:
                 subj = words[:verb_index]
