@@ -108,12 +108,18 @@ class Talk:
             setattr(getattr(self, subj[0]), obj[0], instance)
 
     def handle_is(self, obj, subj):
+        # it's probably a variable assignment, ie, "a" is "b"
         if len(subj) == 1 and len(obj) == 1:
-            # it's probably a variable assignment
             class_name = obj[0]
             obj_type = type(class_name, (), {})
             self.classes[class_name] = obj_type
             setattr(self, subj[0], obj_type())
+        # it's probably an attribute assignment, ie, "a's b" is "3"
+        elif len(subj) == 2 and "'" in subj[0] and len(obj) == 1:
+            subject = subj[0][:subj[0].index("'")]
+            self.create_object_if_needed(subject)
+            self.create_object_if_needed(subj[1])
+            setattr(getattr(self, subject), subj[1], obj[0])
 
     def create_object_if_needed(self, obj):
         if not hasattr(self, obj):
