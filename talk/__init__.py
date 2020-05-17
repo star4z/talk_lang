@@ -30,7 +30,7 @@ END_LINES = {'.': DECLARATIVE, '?': INTERROGATIVE}
 
 
 def filter_articles(words):
-    return [word for word in words if word not in articles]
+    return [word for word in words if word.lower() not in articles]
 
 
 def remove_apostrophe(word):
@@ -41,7 +41,7 @@ class Talk:
     """
     Main class for Talk lang.
     Can be used by calling Talk("Some sentence") for convenience, and also with .talk("Some sentence") for repeated
-    calls.
+    calls on a Talk object.
     """
 
     def __init__(self, line='', print_mode=False):
@@ -119,18 +119,26 @@ class Talk:
             setattr(getattr(self, subj[0]), obj[0], instance)
 
     def handle_is(self, obj, subj):
+        subj = filter_articles(subj)
+
         # it's probably a variable assignment, ie, "a" is "b"
         if len(subj) == 1 and len(obj) == 1:
             class_name = obj[0]
             obj_type = type(class_name, (), {})
             self.classes[class_name] = obj_type
             setattr(self, subj[0], obj_type())
-        # it's probably an attribute assignment, ie, "a's b" is "3"
+        # it's probably an attribute assignment, ie, "a's b" is "c"
         elif len(subj) == 2 and "'" in subj[0] and len(obj) == 1:
             subject = remove_apostrophe(subj[0])
             self.create_object_if_needed(subject)
             self.create_object_if_needed(subj[1])
             setattr(getattr(self, subject), subj[1], obj[0])
+        # case "a of b" is "c" (attribute assignment)
+        elif len(subj) == 3 and OF in subj:
+            adj = subj[0]
+            head = subj[2]
+            self.create_object_if_needed(head)
+            setattr(getattr(self, head), adj, obj[0])
 
     def create_object_if_needed(self, obj):
         if not hasattr(self, obj):
