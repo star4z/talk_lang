@@ -44,7 +44,7 @@ class BasicObjectTests(unittest.TestCase):
         result = Talk("Ben has a height of 6ft. What is Ben's height?")
         self.assertEqual("6ft\n", str(result))
 
-    def field_first_write(self):
+    def test_field_first_assinment(self):
         result = Talk("The height of Ben is 6ft. What is Ben's height?")
         self.assertEqual("6ft\n", str(result))
 
