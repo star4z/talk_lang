@@ -111,11 +111,14 @@ class Talk:
                 elif query == DOES and verb == HAVE:
                     subj = words[verb_index - 1]
                     obj = filter_articles(words[verb_index + 1:])
-                    result = hasattr(getattr(self, subj), obj[0])
-                    if result:
-                        self.print("yes")
+                    if not hasattr(self, subj):
+                        self.print("I don't know.")
                     else:
-                        self.print("no")
+                        result = hasattr(getattr(self, subj), obj[0])
+                        if result:
+                            self.print("yes")
+                        else:
+                            self.print("no")
 
     def handle_verb(self, obj, subj, verb):
         if verb == IS:
