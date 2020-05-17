@@ -3,6 +3,7 @@ import unittest
 from talk import Talk
 
 
+# noinspection PyUnresolvedReferences
 class BasicObjectTests(unittest.TestCase):
     def test_object_creation(self):
         """
@@ -44,7 +45,7 @@ class BasicObjectTests(unittest.TestCase):
         result = Talk("Ben has a height of 6ft. What is Ben's height?")
         self.assertEqual("6ft\n", str(result))
 
-    def test_field_first_assinment(self):
+    def test_field_first_assignment(self):
         result = Talk("The height of Ben is 6ft. What is Ben's height?")
         self.assertEqual("6ft\n", str(result))
 

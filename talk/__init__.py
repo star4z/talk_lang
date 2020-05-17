@@ -1,6 +1,5 @@
 # END_LINES = '[.?\n]'
 
-END_LINES = ('.', '?')
 
 A = 'a'  # nonspecific article
 AN = 'an'
@@ -27,6 +26,8 @@ ARTICLE = 'article'
 DECLARATIVE = 'declarative'
 INTERROGATIVE = 'interrogative'
 
+END_LINES = {'.': DECLARATIVE, '?': INTERROGATIVE}
+
 
 class Talk:
     """
@@ -50,11 +51,8 @@ class Talk:
         # Look through letters to find characters denoting end of sentences, and then handle that sentence.
         for i, c in enumerate(line):
             # TODO: handle case where the period denotes a float, or other similar cases like website names.
-            if c == '.':
-                self.sentence(line[last_end:i], DECLARATIVE)
-                last_end = i + 1
-            elif c == '?':
-                self.sentence(line[last_end:i], INTERROGATIVE)
+            if c in END_LINES:
+                self.sentence(line[last_end:i], END_LINES[c])
                 last_end = i + 1
 
     def __str__(self):
