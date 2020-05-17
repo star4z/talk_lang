@@ -29,12 +29,21 @@ INTERROGATIVE = 'interrogative'
 END_LINES = {'.': DECLARATIVE, '?': INTERROGATIVE}
 
 
+def filter_articles(words):
+    return [word for word in words if word not in articles]
+
+
+def remove_apostrophe(word):
+    return word[:word.index("'")]
+
+
 class Talk:
     """
     Main class for Talk lang.
     Can be used by calling Talk("Some sentence") for convenience, and also with .talk("Some sentence") for repeated
     calls.
     """
+
     def __init__(self, line='', print_mode=False):
         self.classes = {}
         self.output = ''
@@ -70,16 +79,20 @@ class Talk:
             verb = words[verb_index]
             if sentence_type == DECLARATIVE:
                 subj = words[:verb_index]
-                obj = words[verb_index + 1:]
-                obj = [o for o in obj if o not in articles]
+                obj = filter_articles(words[verb_index + 1:])
                 self.handle_verb(obj, subj, verb)
             elif sentence_type == INTERROGATIVE:
                 query = words[0].lower()
                 if query == WHAT and verb == IS:
-                    obj = words[verb_index + 1:]
-                    obj = [o for o in obj if o not in articles]
+                    obj = filter_articles(words[verb_index + 1:])
+                    # case: "b of a"
                     if OF in obj and len(obj) == 3:
                         result = getattr(getattr(self, obj[2]), obj[0])
+                        self.print(result)
+                    # case "a's b"
+                    elif len(obj) == 2 and "'" in obj[0]:
+                        head = remove_apostrophe(obj[0])
+                        result = getattr(getattr(self, head), obj[1])
                         self.print(result)
                     else:
                         result = getattr(getattr(self, obj[2]), obj[0])
@@ -114,7 +127,7 @@ class Talk:
             setattr(self, subj[0], obj_type())
         # it's probably an attribute assignment, ie, "a's b" is "3"
         elif len(subj) == 2 and "'" in subj[0] and len(obj) == 1:
-            subject = subj[0][:subj[0].index("'")]
+            subject = remove_apostrophe(subj[0])
             self.create_object_if_needed(subject)
             self.create_object_if_needed(subj[1])
             setattr(getattr(self, subject), subj[1], obj[0])
