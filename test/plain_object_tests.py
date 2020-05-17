@@ -5,28 +5,36 @@ from talk import Talk
 
 class BasicObjectTests(unittest.TestCase):
     def test_object_creation(self):
+        """
+        Test that defining something as a Person creates the Person class
+        :return:
+        """
         result = Talk("Ben is a person.")
         self.assertIn('person', result.classes)
 
     def test_subject_creation(self):
+        """
+        Test that defining an object as a Person defines that object as a Person.
+        :return:
+        """
         result = Talk("Ben is a person.")
-        self.assertEqual(result.classes['Person'], type(result.Ben))
+        self.assertEqual(result.classes['person'], type(result.Ben))
 
     def test_subject_field_no_value_creation(self):
         result = Talk("Ben has a job.")
-        self.assertIn('Job', result.Ben)
+        self.assertIn('job', vars(result.Ben))
 
     def test_subject_field_value_creation(self):
         result = Talk("Ben is a person. Ben has a height of 6ft.")
-        self.assertEqual("6ft", result.Ben.Height)
+        self.assertEqual("6ft", result.Ben.height)
 
     def test_subject_field_creation_without_subject_creation(self):
         result = Talk("Ben has a height of 6ft.")
-        self.assertEqual("6ft", result.Ben.Height)
+        self.assertEqual("6ft", result.Ben.height)
 
     def test_subject_field_creation_possessive(self):
         result = Talk("Ben's height is 6ft.")
-        self.assertEqual("6ft", result.Ben.Height)
+        self.assertEqual("6ft", result.Ben.height)
 
     def test_subject_field_access(self):
         result = Talk("Ben is a person. Ben has a height of 6ft. What is the height of Ben?", True)
@@ -68,5 +76,3 @@ class BasicObjectTests(unittest.TestCase):
     def test_sub_object_query(self):
         result = Talk("My name is Ben. What is my name?")
         self.assertEqual("Ben\n", str(result))
-
-    
