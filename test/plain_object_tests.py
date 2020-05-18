@@ -59,9 +59,13 @@ class BasicObjectTests(unittest.TestCase):
         result = Talk("Ben has a job. Does Ben have a job?")
         self.assertEqual("yes\n", str(result))
     
-    def test_does_query_for_nonexistant_field(self):
+    def test_does_query_for_nonexistent_field(self):
         result = Talk("Ben is a person. Does Ben have a job?")
         self.assertEqual("no\n", str(result))
+
+    def test_does_have_assignment(self):
+        result = Talk("Ben does have a job. Does Ben have a job?")
+        self.assertEqual("yes\n", str(result))
 
     def test_does_not_have(self):
         result = Talk("Ben does not have a job.")
