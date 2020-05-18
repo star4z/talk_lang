@@ -46,11 +46,24 @@ def remove_apostrophe(word):
     return word[:word.index("'")]
 
 
+class Verb:
+    def __init__(self, value, req_params):
+        self.value = value
+        # req_params is a tuple of types, where the length indicates the number of parameters
+        self.req_params = req_params
+
+    def do(self, *args):
+        if len(args) != len(self.req_params) \
+                or any(arg for i, arg in enumerate(args) if self.req_params[i] != type(args)):
+            raise ValueError("")
+
+
 class Noun:
     def __init__(self, value, supertypes=()):
         self._value = value
         self._fields = dict()
         self._supertypes = supertypes + ('Noun',)
+        self._actions = []
 
     def value(self):
         return self._value

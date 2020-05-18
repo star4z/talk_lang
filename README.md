@@ -1,17 +1,25 @@
-Terminology of project still needs to be established. For example, the linguistics term object and the OOP term
-object are both used in the project. (When splitting a sentence, the object is called the obj and a class object of
-an undefined class reports its class as "object".)
+Talk parses text to determine sentence structure and creates code structures internally to maintain the logic between
+them.
 
-All nouns should retain their original formatting as much as possible under the hood in order to maintain meaning,
-including capitalization. For a somewhat contrived example, "My destiny awaits me in the parlor." vs "My Destiny
-awaits me in the parlor." could have very different meanings: One's future awaits them in the parlor, or their 
-sweetheart. A better example: "The bill is not yet approved." and "Bill is not yet approved." Assuming these were 
-the only statements in the current session, or memory, they would both result in `self.bill.approved = false` or 
-something like that, but if we respect formatting, we get `self.bill.approved = false` and `self.Bill.approved = false`,
-which preserves the speaker's intent.
-As adjective functionality has not yet been added, it is difficult to determine whether a use case for spaces would
-be necessary, but type("this thing", () {}) is valid Python (as of yet).
+In basic usage, Talk will consist of stating data and asking questions in order to produce an output.
 
-"Ben is a person. Ben is tall, skinny, and nerdy. What is Ben?" -> "Ben is a tall, skinny, nerdy person."
+Here's an example (that may not work yet) for calculating the nth Fibonacci number:
 
-"Ben is a Person with a height of 6ft. Tall people have a height over 6ft. Is Ben tall?" -> "Yes."
+```
+A dummy uses numbers.
+A dummy can calculate.
+A dummy requires a number to calculate.
+When the dummy calculates, if the number equals 1, then the result is 0.
+When the dummy calculates, if the number equals 2, then the result is 1.
+When the dummy calculates, if the number is greater than 2, then the result is the sum of calculating (the number minus
+1, and calculating (the number minus 2).
+The dummy calculates with 8.
+What is the result?
+```
+
+The expected result is `13`.
+
+Note that the parentheses are needed to specify the difference between foo(a) - b and foo(a - b).
+
+Numbers is a library of Nouns and Verbs to handle basic math with integers and floats. `The dummy uses numbers.` is 
+intended as an import statement of this library.
