@@ -7,7 +7,7 @@ including capitalization. For a somewhat contrived example, "My destiny awaits m
 awaits me in the parlor." could have very different meanings: One's future awaits them in the parlor, or their 
 sweetheart. A better example: "The bill is not yet approved." and "Bill is not yet approved." Assuming these were 
 the only statements in the current session, or memory, they would both result in `self.bill.approved = false` or 
-something like that, but if we respect formatting, we get self.bill.approved = false and self.Bill.approved = false,
+something like that, but if we respect formatting, we get `self.bill.approved = false` and `self.Bill.approved = false`,
 which preserves the speaker's intent.
 As adjective functionality has not yet been added, it is difficult to determine whether a use case for spaces would
 be necessary, but type("this thing", () {}) is valid Python (as of yet).

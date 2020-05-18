@@ -5,6 +5,7 @@ from talk import Talk
 
 # noinspection PyUnresolvedReferences
 class BasicObjectTests(unittest.TestCase):
+    @unittest.skip("Talk no longer works like this")
     def test_object_creation(self):
         """
         Test that defining something as a Person creates the Person class
@@ -19,23 +20,23 @@ class BasicObjectTests(unittest.TestCase):
         :return:
         """
         result = Talk("Ben is a person.")
-        self.assertEqual(result.classes['person'], type(result.Ben))
+        self.assertTrue(result['Ben'].is_a('person'))
 
     def test_subject_field_no_value_creation(self):
         result = Talk("Ben has a job.")
-        self.assertIn('job', vars(result.Ben))
+        self.assertIn('job', result['Ben'])
 
     def test_subject_field_value_creation(self):
         result = Talk("Ben is a person. Ben has a height of 6ft.")
-        self.assertEqual("6ft", result.Ben.height)
+        self.assertEqual("6ft", str(result['Ben']['height']))
 
     def test_subject_field_creation_without_subject_creation(self):
         result = Talk("Ben has a height of 6ft.")
-        self.assertEqual("6ft", result.Ben.height)
+        self.assertEqual("6ft", str(result['Ben']['height']))
 
     def test_subject_field_creation_possessive(self):
         result = Talk("Ben's height is 6ft.")
-        self.assertEqual("6ft", result.Ben.height)
+        self.assertEqual("6ft", str(result['Ben']['height']))
 
     def test_subject_field_access(self):
         result = Talk("Ben is a person. Ben has a height of 6ft. What is the height of Ben?", True)
@@ -64,7 +65,7 @@ class BasicObjectTests(unittest.TestCase):
 
     def test_does_not_have(self):
         result = Talk("Ben does not have a job.")
-        self.assertEqual(False, result.Ben.Job)
+        self.assertEqual(False, result['Ben'].has_a('job'))
 
     def test_does_query_explicit_negative(self):
         result = Talk("Ben does not have a job. Does Ben have a job?")
@@ -72,7 +73,7 @@ class BasicObjectTests(unittest.TestCase):
 
     def test_sub_object_access(self):
         result = Talk("My name is Ben.")
-        self.assertEqual("Ben", result.My.Name)
+        self.assertEqual("Ben", result['My']['Name'])
 
     def test_sub_object_query(self):
         result = Talk("My name is Ben. What is my name?")
