@@ -17,13 +17,16 @@ BEEN = 'been'
 HAS = 'has'
 HAVE = 'have'
 HAD = 'had'
-
-verbs = (AM, IS, ARE, WAS, WERE, BE, BEING, BEEN, HAS, HAVE, HAD)
-
-WHAT = 'what'  # query operator
 DOES = 'does'
 
+verbs = (AM, IS, ARE, WAS, WERE, BE, BEING, BEEN, HAS, HAVE, HAD, DOES)
+
+WHAT = 'what'  # query operator
+
 OF = 'of'
+
+import ast
+import re
 
 # Word classifications
 VERB = 'verb'
@@ -36,6 +39,53 @@ DECLARATIVE = 'declarative'
 INTERROGATIVE = 'interrogative'
 
 END_LINES = {'.': DECLARATIVE, '?': INTERROGATIVE}
+
+EXPRESSION_TOKENS = {'+', '-', '*', '/', '(', ')'}
+
+
+def normalize_key(noun):
+    if isinstance(noun, Noun):
+        noun = noun.value()
+    if isinstance(noun, str):
+        return noun.lower()
+    return noun
+
+
+def is_quoted_literal(token):
+    return (len(token) >= 2 and ((token[0] == token[-1] == '"') or (token[0] == token[-1] == "'")))
+
+
+def parse_literal(token):
+    if is_quoted_literal(token):
+        return Noun(token[1:-1])
+    try:
+        if '.' in token:
+            float(token)
+            return Noun(token)
+        int(token)
+        return Noun(token)
+    except ValueError:
+        return Noun(token)
+
+
+def looks_like_expression(tokens):
+    return any(token in EXPRESSION_TOKENS for token in tokens)
+
+
+def evaluate_expression(tokens):
+    expr = ' '.join(tokens)
+    node = ast.parse(expr, mode='eval')
+    for sub in ast.walk(node):
+        if not isinstance(sub, (ast.Expression, ast.BinOp, ast.UnaryOp, ast.Num, ast.Constant, ast.Add, ast.Sub, ast.Mult, ast.Div, ast.USub, ast.UAdd, ast.Load, ast.Tuple, ast.Call, ast.Name)):
+            raise ValueError("Unsupported expression")
+        if isinstance(sub, ast.Name):
+            raise ValueError("Unsupported name in expression")
+        if isinstance(sub, ast.Call):
+            raise ValueError("Function calls not supported")
+    result = eval(compile(node, '<string>', 'eval'))
+    if isinstance(result, float) and result.is_integer():
+        result = int(result)
+    return Noun(str(result))
 
 
 def filter_articles(words):
@@ -85,15 +135,33 @@ class Noun:
         v._supertypes = v._supertypes + (key,)
         self._fields[self.uncast(key)] = v
 
+    def __getattr__(self, name):
+        if name.startswith('_'):
+            raise AttributeError(name)
+        if self.uncast(name) in self._fields:
+            return self._fields[self.uncast(name)]
+        raise AttributeError(name)
+
+    def __contains__(self, item):
+        return self.uncast(item) in self._fields
+
     def __iter__(self):
         return iter(self._fields)
 
     def __eq__(self, other):
         o = self.cast(other)
-        return self.value() == o.value() and self.supertypes() == o.supertypes()
+        return self.value() == o.value()
 
     def has_a(self, noun):
         return any(field for field, value in self._fields.items() if value.is_a(self.uncast(noun)))
+
+    @staticmethod
+    def uncast(noun):
+        if isinstance(noun, Noun):
+            noun = noun.value()
+        if isinstance(noun, str):
+            return noun.lower()
+        return noun
 
     def is_a(self, noun):
         return noun in self._supertypes
@@ -102,10 +170,6 @@ class Noun:
     def cast(noun):
         """Converts all non-Nouns to Nouns"""
         return noun if isinstance(noun, Noun) else Noun(noun)
-
-    @staticmethod
-    def uncast(noun):
-        return noun.value() if isinstance(noun, Noun) else noun
 
 
 class Talk(Noun):
@@ -135,9 +199,27 @@ class Talk(Noun):
             if c in END_LINES:
                 self.sentence(line[last_end:i], END_LINES[c])
                 last_end = i + 1
+        if last_end < len(line):
+            remaining = line[last_end:].strip()
+            if remaining:
+                self.sentence(remaining, DECLARATIVE)
 
     def __str__(self):
+        if self.output:
+            return self.output
+        if len(self._fields) == 1:
+            value = next(iter(self._fields.values()))
+            return str(value) + '\n'
         return self.output
+
+    def strip_leading_articles(self, words):
+        if not words:
+            return words
+        if len(words) == 1 and words[0].lower() in articles:
+            return words
+        if words[0].lower() == 'a' and self.uncast(words[0]) in self._fields:
+            return words
+        return words[1:] if words[0].lower() in articles else words
 
     def print(self, line):
         if self.print_mode:
@@ -146,46 +228,103 @@ class Talk(Noun):
 
     def sentence(self, sentence, sentence_type):
         words = [word for word in sentence.split(' ') if word]
-        verb_index = next((i for i, word in enumerate(words) if word in verbs), None)
+        verb_index = next((i for i, word in enumerate(words) if word.lower() in verbs), None)
         if verb_index is not None:
-            verb = words[verb_index]
+            verb = words[verb_index].lower()
             if sentence_type == DECLARATIVE:
-                subj = words[:verb_index]
-                obj = filter_articles(words[verb_index + 1:])
-                self.handle_verb(obj, subj, verb)
+                subj = self.strip_leading_articles(words[:verb_index])
+                if verb == DOES:
+                    next_word = words[verb_index + 1].lower() if verb_index + 1 < len(words) else ''
+                    next_next = words[verb_index + 2].lower() if verb_index + 2 < len(words) else ''
+                    if next_word == HAVE:
+                        self.create_object_if_needed(subj[0])
+                        obj = self.strip_leading_articles(words[verb_index + 2:])
+                        self.handle_verb(obj, subj, HAS)
+                    elif next_word == 'not' and next_next == HAVE:
+                        self.create_object_if_needed(subj[0])
+                    else:
+                        obj = self.strip_leading_articles(words[verb_index + 1:])
+                        self.handle_verb(obj, subj, verb)
+                else:
+                    obj = self.strip_leading_articles(words[verb_index + 1:])
+                    self.handle_verb(obj, subj, verb)
             elif sentence_type == INTERROGATIVE:
                 query = words[0].lower()
-                # what is
                 if query == WHAT and verb == IS:
-                    obj = filter_articles(words[verb_index + 1:])
-                    # case: "b of a"
-                    if OF in obj and len(obj) == 3:
-                        # result = getattr(getattr(self, obj[2]), obj[0])
-                        result = self[obj[2]][obj[0]]
-                        self.print(result)
-                    # case "a's b"
-                    elif len(obj) == 2 and "'" in obj[0]:
-                        head = remove_apostrophe(obj[0])
-                        # result = getattr(getattr(self, head), obj[1])
-                        result = self[head][obj[1]]
-                        self.print(result)
-                    else:
-                        # result = getattr(getattr(self, obj[2]), obj[0])
-                        result = self[obj[2]][obj[0]]
-                        self.print(result)
-                # does a have b
-                elif query == DOES and verb == HAVE:
-                    subj = words[verb_index - 1]
-                    obj = filter_articles(words[verb_index + 1:])
-                    if not self.has_a(subj):
+                    obj = self.strip_leading_articles(words[verb_index + 1:])
+                    result = self.resolve_query(obj)
+                    self.print(result)
+                elif query == DOES:
+                    subj = words[verb_index - 1] if verb == HAVE else (words[verb_index + 1] if verb == DOES and verb_index + 2 < len(words) and words[verb_index + 2].lower() == HAVE else None)
+                    if subj is None:
+                        return
+                    obj_index = (verb_index + 1) if verb == HAVE else (verb_index + 3)
+                    obj = filter_articles(words[obj_index:])
+                    if self.uncast(subj) not in self._fields:
                         self.print("I don't know.")
                     else:
-                        # result = hasattr(getattr(self, subj), obj[0])
                         result = self[subj].has_a(obj[0])
-                        if result:
-                            self.print("yes")
-                        else:
-                            self.print("no")
+                        self.print("yes" if result else "no")
+
+    def resolve_query(self, obj):
+        if not obj:
+            return ""
+        if looks_like_expression(obj):
+            return evaluate_expression(obj)
+        if len(obj) == 1:
+            token = obj[0]
+            if is_quoted_literal(token):
+                return parse_literal(token)
+            if token.isdigit() or self.is_number_like(token):
+                return parse_literal(token)
+            if self.uncast(token) in self._fields:
+                return self[token]
+            return parse_literal(token)
+        if len(obj) == 2 and "'" in obj[0]:
+            # Possessive query like "Ben's height": treat the first token as
+            # a subject and the second token as a field on that subject.
+            head = remove_apostrophe(obj[0])
+            return self[head][obj[1]]
+        if len(obj) == 2:
+            # Two-token queries can mean either:
+            #   1) "<subject> <field>" when the first token is a known object,
+            #      e.g. "Ben height".
+            #   2) If the first token is not known but the second token is,
+            #      return the second token as the referenced object.
+            #   3) Otherwise, interpret the phrase as a literal value.
+            if self.uncast(obj[0]) in self._fields:
+                return self[obj[0]][obj[1]]
+            return self[obj[1]] if self.uncast(obj[1]) in self._fields else parse_literal(' '.join(obj))
+        if len(obj) == 3 and obj[1].lower() == OF:
+            # Queries of the form "<field> of <object>", e.g. "height of Ben". Similar to the two-
+            # token case, if the object is known, return the field on that object, otherwise 
+            # interpret as a literal value.
+            field = obj[0]
+            target = obj[2]
+            if is_quoted_literal(target) or target.isdigit() or self.is_number_like(target):
+                if field.lower() == 'value':
+                    # Special case for "value of <literal>", which just returns the literal value,
+                    # since it doesn't make sense to have a field called "value" on a literal.
+                    return parse_literal(target)
+                # If the target is a literal but the field is not "value", then interpret the whole
+                # thing as a literal, since it doesn't make sense to query a field on a literal.
+                return parse_literal(target)
+            if field.lower() == 'value':
+                # Special case for "value of <object>", which just returns the object itself, since
+                # the "value" field is implicit on all objects.
+                return self[target]
+            # For non-literal targets, if the target is known, return the field on that target.
+            return self[target][field]
+        # For longer queries that don't match any of the above patterns, interpret as a literal value.
+        return parse_literal(' '.join(obj))
+
+    @staticmethod
+    def is_number_like(value):
+        try:
+            float(value)
+            return True
+        except ValueError:
+            return False
 
     def handle_verb(self, obj, subj, verb):
         if verb == IS:
@@ -194,43 +333,47 @@ class Talk(Noun):
             self.handle_has(obj, subj)
 
     def handle_has(self, obj, subj):
-        # it's probably a field assignment (eg. subj "has a" field of value, where obj = ["field", "of", "value"]
-        if OF in obj and len(obj) == 3 and len(subj) == 1:
-            # create subject reference on this Talk object if it doesn't exist
-            self.create_object_if_needed(subj[0])
-            # Set self.subj.field = value (field = obj[0], value = obj[2])
-            # setattr(getattr(self, subj[0]), obj[0], obj[2])
-            self[subj[0]][obj[0]] = obj[2]
-
-        # it's a field with no value; eg. obj has a subj
-        elif len(obj) == 1 and len(subj) == 1:
-            self.create_object_if_needed(subj[0])
-            self[subj[0]][obj[0]] = self.create_object_if_needed(obj[0])
+        if len(subj) > 0:
+            subject = subj[0]
+            self.create_object_if_needed(subject)
+            if len(subj) > 1 and 'not' in [word.lower() for word in subj]:
+                return
+            if len(obj) == 1:
+                self[subject][obj[0]] = self.create_object_if_needed(obj[0])
+            elif OF in obj and len(obj) == 3:
+                self[subject][obj[0]] = obj[2]
 
     def handle_is(self, obj, subj):
-        subj = filter_articles(subj)
+        subj = self.strip_leading_articles(subj)
 
-        # it's probably a variable assignment, ie, "a" is "b"
+        # variable assignment, ie, "a" is "b"
         if len(subj) == 1 and len(obj) == 1:
-            class_name = obj[0]
-            obj_type = type(class_name, (), {})
-            self.classes[class_name] = obj_type
-            # setattr(self, subj[0], obj_type())
-            self[subj[0]] = Noun(obj[0], supertypes=(obj[0],))
-        # it's probably an attribute assignment, ie, "a's b" is "c"
+            if is_quoted_literal(obj[0]) or self.is_number_like(obj[0]):
+                self[subj[0]] = parse_literal(obj[0])
+            else:
+                self.classes[obj[0]] = type(obj[0], (), {})
+                self[subj[0]] = Noun(obj[0], supertypes=(obj[0],))
+        # attribute assignment, ie, "a's b" is "c"
         elif len(subj) == 2 and "'" in subj[0] and len(obj) == 1:
             subject = remove_apostrophe(subj[0])
             self.create_object_if_needed(subject)
             self.create_object_if_needed(subj[1])
-            # setattr(getattr(self, subject), subj[1], obj[0])
-            self[subject][subj[1]] = obj[0]
-        # case "a of b" is "c" (attribute assignment)
-        elif len(subj) == 3 and OF in subj:
+            self[subject][subj[1]] = parse_literal(obj[0])
+        # assignment of a field on an object, ie, "My name is Ben"
+        elif len(subj) == 2 and len(obj) == 1:
+            subject = subj[0]
+            field = subj[1]
+            self.create_object_if_needed(subject)
+            self[subject][field] = parse_literal(obj[0])
+        # case "a of b" is "c" (attribute assignment or variable assignment for value)
+        elif len(subj) == 3 and OF in subj and len(obj) == 1:
             adj = subj[0]
             head = subj[2]
-            self.create_object_if_needed(head)
-            # setattr(getattr(self, head), adj, obj[0])
-            self[head][adj] = obj[0]
+            if adj.lower() == 'value':
+                self[head] = parse_literal(obj[0])
+            else:
+                self.create_object_if_needed(head)
+                self[head][adj] = parse_literal(obj[0])
 
     def create_object_if_needed(self, obj):
         # if not hasattr(self, obj):

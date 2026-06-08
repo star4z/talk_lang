@@ -16,7 +16,7 @@ class LiteralTests(unittest.TestCase):
         self.assertEqual('foo\n', str(result))
 
     def test_query_simple_value(self):
-        result = Talk("The value of a is 3. What is the value of 3?")
+        result = Talk("The value of a is 3. What is the value of a?")
         self.assertEqual('3\n', str(result))
 
     def test_query_echo_string_literal(self):
@@ -27,4 +27,19 @@ class LiteralTests(unittest.TestCase):
         result = Talk("What is 2 + 2?")
         self.assertEqual('4\n', str(result))
 
+    def test_basic_math_with_variables(self):
+        result = Talk("The value of a is 2. What is a + a?")
+        self.assertEqual('4\n', str(result))
+
+    def test_basic_math_with_variables_and_literals(self):
+        result = Talk("The value of a is 2. What is a + 3?")
+        self.assertEqual('5\n', str(result))
+
+    def test_basic_math_with_variables_and_string_literals(self):
+        result = Talk("The value of a is 2. What is a + \'3\'?")
+        self.assertEqual('5\n', str(result))
+
+    def test_basic_math_with_multiple_variables(self):
+        result = Talk("The value of a is 2. The value of b is 3. What is a + b?")
+        self.assertEqual('5\n', str(result))
     
