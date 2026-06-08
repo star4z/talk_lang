@@ -296,12 +296,11 @@ class Talk(Noun):
             if self.uncast(obj[0]) in self._fields:
                 return self[obj[0]][obj[1]]
             return self[obj[1]] if self.uncast(obj[1]) in self._fields else parse_literal(' '.join(obj))
-        if len(obj) == 3 and obj[1].lower() == OF:
-            # Queries of the form "<field> of <object>", e.g. "height of Ben". Similar to the two-
-            # token case, if the object is known, return the field on that object, otherwise 
-            # interpret as a literal value.
+        if len(obj) >= 3 and obj[1].lower() == OF:
+            # Queries of the form "<field> of <object>", e.g. "height of Ben" or
+            # "name of my friend". Supports multi-word object targets.
             field = obj[0]
-            target = obj[2]
+            target = ' '.join(obj[2:])
             if is_quoted_literal(target) or target.isdigit() or self.is_number_like(target):
                 if field.lower() == 'value':
                     # Special case for "value of <literal>", which just returns the literal value,
@@ -313,9 +312,15 @@ class Talk(Noun):
             if field.lower() == 'value':
                 # Special case for "value of <object>", which just returns the object itself, since
                 # the "value" field is implicit on all objects.
-                return self[target]
+                try:
+                    return self[target]
+                except KeyError:
+                    return "I don't know."
             # For non-literal targets, if the target is known, return the field on that target.
-            return self[target][field]
+            try:
+                return self[target][field]
+            except KeyError:
+                return "I don't know."
         # For longer queries that don't match any of the above patterns, interpret as a literal value.
         return parse_literal(' '.join(obj))
 

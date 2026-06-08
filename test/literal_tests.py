@@ -42,4 +42,8 @@ class LiteralTests(unittest.TestCase):
     def test_basic_math_with_multiple_variables(self):
         result = Talk("The value of a is 2. The value of b is 3. What is a + b?")
         self.assertEqual('5\n', str(result))
+
+    def test_unknown_variable_query(self):
+        result = Talk("What is the value of a?")
+        self.assertEqual("I don't know.\n", str(result))
     
