@@ -118,9 +118,6 @@ class Noun:
     def value(self):
         return self._value
 
-    def supertypes(self):
-        return self._supertypes
-
     def __str__(self):
         return str(self.value())
 
@@ -166,10 +163,28 @@ class Noun:
     def is_a(self, noun):
         return noun in self._supertypes
 
+    def supertypes(self):
+        return self._supertypes
+
     @staticmethod
     def cast(noun):
         """Converts all non-Nouns to Nouns"""
         return noun if isinstance(noun, Noun) else Noun(noun)
+
+
+class ActionRule:
+    def __init__(self, condition, target, expression):
+        self.condition = condition
+        self.target = target
+        self.expression = expression
+
+
+class ActionDefinition:
+    def __init__(self, class_name, action_name):
+        self.class_name = class_name
+        self.action_name = action_name
+        self.parameters = []
+        self.rules = []
 
 
 class Talk(Noun):
@@ -182,6 +197,7 @@ class Talk(Noun):
     def __init__(self, line='', print_mode=False):
         super().__init__('root Talk Noun')
         self.classes = {}
+        self.actions = {}
         self.output = ''
         self.print_mode = print_mode
 
@@ -227,11 +243,31 @@ class Talk(Noun):
         self.output += str(line) + '\n'
 
     def sentence(self, sentence, sentence_type):
+        sentence = sentence.strip()
+        if not sentence:
+            return
         words = [word for word in sentence.split(' ') if word]
+        category = self.categorize_sentence(sentence, sentence_type)
+
+        # Support additional sentence shapes beyond simple declarative/interrogative
+        # such as action definition and conditional rule declarations.
+        if category == 'when':
+            self.handle_when(sentence)
+            return
+
+        if category == 'action_definition':
+            self.handle_action_definition(sentence)
+            return
+
+        # Try executing explicit action invocation forms before falling back to
+        # normal subject-verb-object handling.
+        if self.try_handle_action_invocation(words):
+            return
+
         verb_index = next((i for i, word in enumerate(words) if word.lower() in verbs), None)
         if verb_index is not None:
             verb = words[verb_index].lower()
-            if sentence_type == DECLARATIVE:
+            if category == DECLARATIVE:
                 subj = self.strip_leading_articles(words[:verb_index])
                 if verb == DOES:
                     next_word = words[verb_index + 1].lower() if verb_index + 1 < len(words) else ''
@@ -248,7 +284,7 @@ class Talk(Noun):
                 else:
                     obj = self.strip_leading_articles(words[verb_index + 1:])
                     self.handle_verb(obj, subj, verb)
-            elif sentence_type == INTERROGATIVE:
+            elif category == INTERROGATIVE:
                 query = words[0].lower()
                 if query == WHAT and verb == IS:
                     obj = self.strip_leading_articles(words[verb_index + 1:])
@@ -276,6 +312,290 @@ class Talk(Noun):
                             self.print("yes")
                         else:
                             self.print("no")
+
+    def categorize_sentence(self, sentence, sentence_type):
+        """Classify the sentence by content and punctuation.
+
+        The system uses the punctuation-derived sentence type as a base, but
+        supports additional declarative sentence forms for action definitions
+        and conditional rules.
+        """
+        normalized = sentence.strip().lower()
+        if normalized.startswith('when '):
+            return 'when'
+        if ' can ' in normalized or ' requires ' in normalized:
+            return 'action_definition'
+        if sentence_type == INTERROGATIVE:
+            return INTERROGATIVE
+        return DECLARATIVE
+
+    def handle_action_definition(self, sentence):
+        """Parse declarative action definitions like "A dummy can calculate." or
+        "A dummy requires a number to calculate." and record the action metadata.
+        """
+        words = [word for word in sentence.rstrip('.').split(' ') if word]
+        lower = [w.lower() for w in words]
+        if 'can' in lower:
+            idx = lower.index('can')
+            class_name = self.strip_leading_articles(words[:idx])[0]
+            action_name = self.normalize_action_name(words[idx + 1])
+            self.define_action_for_class(class_name, action_name)
+            return
+        if 'requires' in lower and 'to' in lower:
+            idx = lower.index('requires')
+            to_idx = lower.index('to')
+            class_name = self.strip_leading_articles(words[:idx])[0]
+            param_tokens = self.strip_leading_articles(words[idx + 1:to_idx])
+            param_name = self.uncast(param_tokens[-1]) if param_tokens else 'value'
+            action_name = self.normalize_action_name(words[to_idx + 1])
+            action_def = self.define_action_for_class(class_name, action_name)
+            if param_name not in action_def.parameters:
+                action_def.parameters.append(param_name)
+
+    def handle_when(self, sentence):
+        """Parse conditional action rules declared with a `When ... if ... then ...` sentence."""
+        sentence = sentence.rstrip('.').strip()
+        if sentence.lower().startswith('when '):
+            sentence = sentence[5:]
+        match = re.match(r'(.+?),\s*if\s+(.+?),\s*then\s+(.+)', sentence, re.I)
+        if not match:
+            return
+        action_phrase, condition_text, effect_text = match.groups()
+        subject_words = self.strip_leading_articles([word for word in action_phrase.split(' ') if word])
+        if len(subject_words) < 2:
+            return
+        subject_name = self.uncast(subject_words[0])
+        action_name = self.normalize_action_name(subject_words[1])
+        action_def = self.define_action_for_class(subject_name, action_name)
+        condition = self.parse_action_condition(condition_text)
+        target, expression = self.parse_action_effect(effect_text)
+        action_def.rules.append(ActionRule(condition, target, expression))
+
+    def try_handle_action_invocation(self, words):
+        """Detect and execute action invocation sentences like "The dummy calculates with 8."."""
+        lower = [word.lower() for word in words]
+        for i, word in enumerate(words):
+            action_name = self.normalize_action_name(word)
+            if i == 0:
+                continue
+            subject = self.strip_leading_articles(words[:i])
+            if not subject:
+                continue
+            action_def = self.get_action_definition_for_subject(subject[0], action_name)
+            if not action_def:
+                continue
+            params = {}
+            if 'with' in lower[i + 1:]:
+                with_index = lower.index('with', i + 1)
+                param_expr = ' '.join(words[with_index + 1:])
+                if param_expr:
+                    param_value = self.evaluate_action_expression(param_expr, {}, subject[0], action_name)
+                    param_name = action_def.parameters[0] if action_def.parameters else 'value'
+                    params[param_name] = param_value
+            self.execute_action(subject[0], action_name, params)
+            return True
+        return False
+
+    def normalize_action_name(self, word):
+        normalized = word.lower()
+        if normalized.endswith('s'):
+            candidate = normalized[:-1]
+            if candidate in self.get_all_action_names() or candidate.endswith('e'):
+                return candidate
+        if normalized.endswith('ing'):
+            root = normalized[:-3]
+            if root in self.get_all_action_names():
+                return root
+            if root + 'e' in self.get_all_action_names():
+                return root + 'e'
+        return normalized
+
+    def get_all_action_names(self):
+        return {action_name for _, action_name in self.actions.keys()}
+
+    def get_action_definition_for_subject(self, subject, action_name):
+        subject_name = self.uncast(subject)
+        if (subject_name, action_name) in self.actions:
+            return self.actions[(subject_name, action_name)]
+        if self.uncast(subject_name) in self._fields:
+            target = self[subject_name]
+            for supertype in target.supertypes():
+                if (supertype, action_name) in self.actions:
+                    return self.actions[(supertype, action_name)]
+        return None
+
+    def define_action_for_class(self, class_name, action_name):
+        class_name = self.uncast(class_name)
+        if class_name not in self.classes:
+            self.classes[class_name] = type(class_name, (), {})
+        key = (class_name, action_name)
+        if key not in self.actions:
+            self.actions[key] = ActionDefinition(class_name, action_name)
+        return self.actions[key]
+
+    def parse_action_condition(self, text):
+        """Convert a condition phrase into a callable predicate for action rules."""
+        tokens = [word for word in text.rstrip('.').split(' ') if word]
+        tokens = filter_articles(tokens)
+        lower = [word.lower() for word in tokens]
+        if 'equals' in lower:
+            idx = lower.index('equals')
+            left = tokens[:idx]
+            right = tokens[idx + 1:]
+            return lambda params: self.evaluate_action_value(left, params) == self.evaluate_action_value(right, params)
+        if 'is' in lower and 'greater' in lower and 'than' in lower:
+            idx = lower.index('is')
+            left = tokens[:idx]
+            right = tokens[idx + 3:]
+            return lambda params: self.evaluate_action_value(left, params) > self.evaluate_action_value(right, params)
+        return lambda params: False
+
+    def parse_action_effect(self, text):
+        """Parse the effect portion of a rule and return a target plus expression."""
+        tokens = [word for word in text.rstrip('.').split(' ') if word]
+        target_tokens = filter_articles(tokens[:tokens.index('is')] if 'is' in [w.lower() for w in tokens] else tokens)
+        lower = [word.lower() for word in tokens]
+        if 'is' in lower:
+            idx = lower.index('is')
+            target = ' '.join(self.uncast(word) for word in target_tokens)
+            expression = ' '.join(tokens[idx + 1:])
+            return target, expression
+        return None, text
+
+    def evaluate_action_value(self, words, params):
+        if len(words) == 1:
+            token = words[0]
+            key = token.lower()
+            if key in params:
+                return self.to_number(params[key])
+            if token.isdigit() or self.is_number_like(token):
+                return self.to_number(token)
+            return self.to_number(parse_literal(token).value())
+        return self.evaluate_action_expression(' '.join(words), params)
+
+    def evaluate_action_expression(self, expression, params, subject=None, action_name=None):
+        expression = expression.strip()
+        # Auto-close nested calculating calls that use the README-style
+        # "calculating (a, and calculating (b)" structure.
+        expression = re.sub(r'(calculating\s*\([^\)]*?),(?=\s*and\s+calculating\s*\()', r'\1)', expression, flags=re.I)
+        # Handle nested action calls first
+        while True:
+            match = re.search(r'calculating\s*\(', expression, re.I)
+            if not match:
+                break
+            start = match.start()
+            open_paren = expression.find('(', match.end() - 1)
+            close_paren = self.find_matching_paren(expression, open_paren)
+            if close_paren is None:
+                break
+            inner = expression[open_paren + 1:close_paren]
+            value = self.evaluate_action_expression(inner, params, subject, action_name)
+            if subject and action_name:
+                action_def = self.get_action_definition_for_subject(subject, action_name)
+                if action_def:
+                    param_name = action_def.parameters[0] if action_def.parameters else 'value'
+                    value = self.execute_action(subject, action_name, {param_name: value})
+                    value = self.to_number(value)
+            expression = expression[:start] + str(value) + expression[close_paren + 1:]
+        lowered = expression.lower()
+        if lowered.startswith('the sum of '):
+            remainder = expression[len('the sum of '):]
+            parts = self.split_top_level_terms(remainder)
+            return sum(self.evaluate_action_expression(part, params, subject, action_name) for part in parts)
+        if lowered.startswith('sum of '):
+            remainder = expression[len('sum of '):]
+            parts = self.split_top_level_terms(remainder)
+            return sum(self.evaluate_action_expression(part, params, subject, action_name) for part in parts)
+        return self.evaluate_math_expression(expression, params)
+
+    def split_top_level_terms(self, text):
+        terms = []
+        current = []
+        depth = 0
+        for word in text.split(' '):
+            lower = word.lower().strip(',')
+            # Keep track of parentheses depth so we only split at top level.
+            if '(' in word:
+                depth += word.count('(')
+            if ')' in word:
+                depth -= word.count(')')
+            if depth == 0 and lower in ('and', ','):
+                if current:
+                    terms.append(' '.join(current).strip())
+                    current = []
+            else:
+                current.append(word.strip(','))
+        if current:
+            terms.append(' '.join(current).strip())
+        return terms
+
+    def find_matching_paren(self, text, open_index):
+        depth = 0
+        for i in range(open_index, len(text)):
+            if text[i] == '(':
+                depth += 1
+            elif text[i] == ')':
+                depth -= 1
+                if depth == 0:
+                    return i
+        return None
+
+    def evaluate_math_expression(self, expression, params):
+        tokens = []
+        for token in expression.replace('(', ' ( ').replace(')', ' ) ').replace(',', ' ').split():
+            lower = token.lower()
+            # Map natural-language arithmetic words into operators before
+            # evaluating the expression.
+            if lower in articles or lower == 'and':
+                continue
+            if lower in ('plus', 'add', 'added'):
+                tokens.append('+')
+            elif lower in ('minus', 'subtract', 'subtracted'):
+                tokens.append('-')
+            elif lower in ('times', 'multiplied', 'multiply'):
+                tokens.append('*')
+            elif lower in ('divided', 'over', 'divide'):
+                tokens.append('/')
+            elif lower == 'number' and 'number' in params:
+                tokens.append(str(self.to_number(params['number'])))
+            elif lower in params:
+                tokens.append(str(self.to_number(params[lower])))
+            elif token.isdigit() or self.is_number_like(token):
+                tokens.append(token)
+            else:
+                tokens.append(token)
+        resolved = [self._resolve_expression_token(token) for token in tokens]
+        result = evaluate_expression(resolved)
+        return self.to_number(result.value())
+
+    def to_number(self, value):
+        if isinstance(value, Noun):
+            value = value.value()
+        if isinstance(value, str):
+            return int(value) if value.isdigit() else float(value)
+        return value
+
+    def execute_action(self, subject, action_name, params):
+        action_def = self.get_action_definition_for_subject(subject, action_name)
+        if not action_def:
+            return None
+        self.create_object_if_needed(subject, supertypes=(self.uncast(subject),))
+        normalized_params = {k.lower(): self.to_number(v) for k, v in params.items()}
+        for rule in action_def.rules:
+            if rule.condition(normalized_params):
+                return self.apply_action_effect(subject, action_name, rule.target, rule.expression, normalized_params)
+        return None
+
+    def apply_action_effect(self, subject, action_name, target, expression, params):
+        result = self.evaluate_action_expression(expression, params, subject, action_name)
+        wrapped = Noun(str(result))
+        if target == 'result':
+            self['result'] = wrapped
+        elif self.uncast(target) in self._fields:
+            self[target] = wrapped
+        else:
+            self['result'] = wrapped
+        return result
 
     def resolve_query(self, obj):
         if not obj:
@@ -406,19 +726,14 @@ class Talk(Noun):
                 self.create_object_if_needed(head)
                 self[head][adj] = parse_literal(obj[0])
 
-    def create_object_if_needed(self, obj):
-        # if not hasattr(self, obj):
-        #     # Create generic "object" type and add it to the stored types
-        #     object_type = type('object', (), {})
-        #     self.classes['object'] = object_type
-        #     # Adds subject as an 'object' to this root object
-        #     instance = object_type()
-        #     setattr(self, obj, instance)
-        #     return instance
-        # else:
-        #     return getattr(self, obj)
+    def create_object_if_needed(self, obj, supertypes=()):
         if obj not in self:
-            self[obj] = obj
+            self[obj] = Noun(obj, supertypes=supertypes)
+        else:
+            existing = self[obj]
+            for st in supertypes:
+                if st not in existing._supertypes:
+                    existing._supertypes += (st,)
         return self[obj]
 
 
