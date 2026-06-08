@@ -1,3 +1,7 @@
+# Talk
+
+Talk is an NLP-ish language designed to look like English.
+
 Talk parses text to determine sentence structure and creates code structures internally to maintain the logic between
 them.
 
@@ -23,3 +27,33 @@ Note that the parentheses are needed to specify the difference between foo(a) - 
 
 Numbers is a library of Nouns and Verbs to handle basic math with integers and floats. `The dummy uses numbers.` is 
 intended as an import statement of this library.
+
+## Using Talk
+
+### Interactive Terminal
+
+Talk can be run as an interactive terminal using `python3 -m talk`.
+
+If more access to the state is desired, run python interactively. See the API section below. 
+
+### API
+
+Talk can be invoked from a script:
+
+```py
+from talk import Talk
+
+result = Talk('This is an example').output
+```
+
+To have Talk print answers to the terminal, use `print_mode=True`:
+
+```py
+result = Talk('An apple is red.', print_mode=True)
+```
+
+`output` will contain the result regardless of whether `print_mode` is enabled.
+
+`Talk().__dict__` can be useful to observe the internal state and better understand how Talk represents concepts internally.
+
+See tests for more examples.
