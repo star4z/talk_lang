@@ -30,7 +30,7 @@ intended as an import statement of this library.
 
 Talk is intended to resemble the text of a book. A Talk program should resemble a list of statements and their conclusions. Talk is not intended to be a conversational partner, and therefore features should not be added where you can talk to Talk directly. You are *making* talk, not *talking to Talk*. Questions should be understood to be rhetorical, and Talk just happens to fill in the blank for your convenience. 
 
-This is why in the examples the dummy is created as an object to do calculations on, instead of doing the calculations directly on the Talk object. Maybe this can be changed in the future to refer to "I" for more concise syntax, like "To foo a number, (I must) add 2 to the number."
+This is why in the examples the dummy is created as an object to do calculations on, instead of doing the calculations directly on the Talk object. Maybe this can be changed in the future to allow nonspecific subjects, like "To foo a number, add 2 to the number."
 
 ## Using Talk
 
@@ -77,14 +77,10 @@ Talk supports a small English-like language for defining objects, state, queries
 
 ## Aspirational Language Features
 
-### Inferring noun specificity from formatting:
+### Formatting-specific nouns
 
 All nouns should retain their original formatting as much as possible under the hood in order to maintain meaning,
-including capitalization. For a somewhat contrived example, "My destiny awaits me in the parlor." vs "My Destiny
-awaits me in the parlor." could have very different meanings: One's future awaits them in the parlor, or their 
-sweetheart.
-
-A better example: "The bill is not yet approved." and "Bill is not yet approved.
+including capitalization. For example: "The bill is not yet approved." and "Bill is not yet approved.
 
 "The bill is not yet approved. Is the bill approved?" -> "No"
 
@@ -96,10 +92,22 @@ A better example: "The bill is not yet approved." and "Bill is not yet approved.
 
 Poor Bill, always trying to get approved but never getting approved.
 
-### Adjective support:
+This could be extended to inferring some properties of object type from the formatting. For example, "His destiny awaits him in the parlor." vs "His Destiny
+awaits him in the parlor." could have very different meanings: One's future awaits them in the parlor, or their 
+sweetheart. Should 
+
+"His destiny awaits him in the parlor. What awaits him in the parlor?" -> "His destiny"
+
+"His destiny awaits him in the parlor. Who awaits him in the parlor?" -> "I don't know"
+
+"His Destiny awaits him in the parlor. What awaits him in the parlor?" -> "I don't know"
+
+"His Destiny awaits him in the parlor. Who awaits him in the parlor?" -> "Destiny"
+
+### Adjective support
 
 "Ben is a person. Ben is tall, skinny, and nerdy. What is Ben?" -> "Ben is a tall, skinny, nerdy person."
 
-### Logical following:
+### Logical following
 
 "Ben is a Person with a height of 6ft. Tall people have a height over 6ft. Is Ben tall?" -> "Yes."
