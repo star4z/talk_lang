@@ -1,4 +1,3 @@
-
-from . import main
+from .cli import main
 
 main()
