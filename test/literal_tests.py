@@ -21,7 +21,7 @@ class LiteralTests(unittest.TestCase):
 
     def test_query_echo_string_literal(self):
         result = Talk("What is the value of \'foo\'?")
-        self.assertEqual("I don't know.\n", str(result))
+        self.assertEqual("It is unknown.\n", str(result))
 
     def test_basic_math(self):
         result = Talk("What is 2 + 2?")
@@ -45,5 +45,5 @@ class LiteralTests(unittest.TestCase):
 
     def test_unknown_variable_query(self):
         result = Talk("What is the value of a?")
-        self.assertEqual("I don't know.\n", str(result))
+        self.assertEqual("It is unknown.\n", str(result))
     

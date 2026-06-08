@@ -70,7 +70,7 @@ Talk supports a small English-like language for defining objects, state, queries
 - Property assignment: `Ben has a job.`, `Ben has a height of 6ft.`, and possessive forms like `Ben's height is 6ft.`
 - Value queries: `What is the height of Ben?`, `What is Ben's height?`
 - Yes/no queries: `Does Ben have a job?`, `Is Ben tall?`
-- Unknown answers: unknown values respond with `I don't know.`
+- Unknown answers: unknown values respond with `It is unknown.`
 - Literal values: numeric literals and quoted strings (`'foo'` / `"foo"`).
 - Basic arithmetic in queries: `What is 2 + 2?`, `What is a + b?`, with support for `+`, `-`, `*`, `/`, and parentheses.
 - Function/action definitions: `A dummy can calculate.`, `A dummy requires a number to calculate.`, `When the dummy calculates, if ... then ...`, and invocation like `The dummy calculates with 8.`
@@ -84,9 +84,9 @@ including capitalization. For example: "The bill is not yet approved." and "Bill
 
 "The bill is not yet approved. Is the bill approved?" -> "No"
 
-"The bill is not yet approved. Is Bill aproved?" -> "I don't know."
+"The bill is not yet approved. Is Bill aproved?" -> "It is unknown."
 
-"Bill is not yet approved. Is the bill approved?" -> "I don't know."
+"Bill is not yet approved. Is the bill approved?" -> "It is unknown."
 
 "Bill is not yet approved. Is Bill approved?" -> "No"
 
@@ -98,9 +98,9 @@ sweetheart. Should
 
 "His destiny awaits him in the parlor. What awaits him in the parlor?" -> "His destiny"
 
-"His destiny awaits him in the parlor. Who awaits him in the parlor?" -> "I don't know"
+"His destiny awaits him in the parlor. Who awaits him in the parlor?" -> "It is unknown."
 
-"His Destiny awaits him in the parlor. What awaits him in the parlor?" -> "I don't know"
+"His Destiny awaits him in the parlor. What awaits him in the parlor?" -> "It is unknown."
 
 "His Destiny awaits him in the parlor. Who awaits him in the parlor?" -> "Destiny"
 

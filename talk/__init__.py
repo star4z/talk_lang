@@ -297,7 +297,7 @@ class Talk(Noun):
                     obj_index = (verb_index + 1) if verb == HAVE else (verb_index + 3)
                     obj = filter_articles(words[obj_index:])
                     if self.uncast(subj) not in self._fields:
-                        self.print("I don't know.")
+                        self.print(self.unknown_result())
                     else:
                         result = self[subj].has_a(obj[0])
                         self.print("yes" if result else "no")
@@ -305,7 +305,7 @@ class Talk(Noun):
                     subj = self.strip_leading_articles(words[verb_index + 1:verb_index + 2])
                     obj = self.strip_leading_articles(words[verb_index + 2:])
                     if not subj or self.uncast(subj[0]) not in self._fields:
-                        self.print("I don't know.")
+                        self.print(self.unknown_result())
                     else:
                         subject = self[subj[0]]
                         if obj and (subject.is_a(obj[0]) or subject.has_a(obj[0])):
@@ -626,7 +626,7 @@ class Talk(Noun):
             #   3) Otherwise, interpret the phrase as a literal value.
             if self.uncast(obj[0]) in self._fields:
                 subject = self[obj[0]]
-                return subject[obj[1]] if obj[1] in subject else "I don't know."
+                return subject[obj[1]] if obj[1] in subject else self.unknown_result()
             return self[obj[1]] if self.uncast(obj[1]) in self._fields else parse_literal(' '.join(obj))
         if len(obj) >= 3 and obj[1].lower() == OF:
             # Queries of the form "<field> of <object>", e.g. "height of Ben" or
@@ -637,7 +637,7 @@ class Talk(Noun):
                 if field.lower() == 'value':
                     # Don't treat a query like "value of 'foo'" or "value of 3" as an echo;
                     # such queries should return an unknown value.
-                    return "I don't know."
+                    return self.unknown_result()
                 # If the target is a literal but the field is not "value", then interpret the whole
                 # thing as a literal, since it doesn't make sense to query a field on a literal.
                 return parse_literal(target)
@@ -647,12 +647,12 @@ class Talk(Noun):
                 try:
                     return self[target]
                 except KeyError:
-                    return "I don't know."
+                    return self.unknown_result()
             # For non-literal targets, if the target is known, return the field on that target.
             try:
                 return self[target][field]
             except KeyError:
-                return "I don't know."
+                return self.unknown_result()
         # For longer queries that don't match any of the above patterns, interpret as a literal value.
         return parse_literal(' '.join(obj))
 
@@ -735,6 +735,9 @@ class Talk(Noun):
                 if st not in existing._supertypes:
                     existing._supertypes += (st,)
         return self[obj]
+
+    def unknown_result(self):
+        return "It is unknown."
 
 
 def main():
