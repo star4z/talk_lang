@@ -270,7 +270,8 @@ class Talk(Noun):
         if not obj:
             return ""
         if looks_like_expression(obj):
-            return evaluate_expression(obj)
+            resolved = [self._resolve_expression_token(token) for token in obj]
+            return evaluate_expression(resolved)
         if len(obj) == 1:
             token = obj[0]
             if is_quoted_literal(token):
@@ -325,6 +326,19 @@ class Talk(Noun):
             return True
         except ValueError:
             return False
+
+    def _resolve_expression_token(self, token):
+        if token in EXPRESSION_TOKENS:
+            return token
+        if is_quoted_literal(token):
+            value = parse_literal(token).value()
+            return str(value)
+        if token.isdigit() or self.is_number_like(token):
+            return token
+        if self.uncast(token) in self._fields:
+            value = self[token].value()
+            return str(value)
+        return token
 
     def handle_verb(self, obj, subj, verb):
         if verb == IS:

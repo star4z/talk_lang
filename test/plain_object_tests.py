@@ -5,7 +5,6 @@ from talk import Talk
 
 # noinspection PyUnresolvedReferences
 class BasicObjectTests(unittest.TestCase):
-    @unittest.skip("Talk no longer works like this")
     def test_object_creation(self):
         """
         Test that defining something as a Person creates the Person class
