@@ -3,7 +3,7 @@ them.
 
 In basic usage, Talk will consist of stating data and asking questions in order to produce an output.
 
-Here's an example (that may not work yet) for calculating the nth Fibonacci number:
+Here's an example for calculating the nth Fibonacci number:
 
 ```
 A dummy uses numbers.
@@ -12,7 +12,7 @@ A dummy requires a number to calculate.
 When the dummy calculates, if the number equals 1, then the result is 0.
 When the dummy calculates, if the number equals 2, then the result is 1.
 When the dummy calculates, if the number is greater than 2, then the result is the sum of calculating (the number minus
-1, and calculating (the number minus 2).
+1), and calculating (the number minus 2).
 The dummy calculates with 8.
 What is the result?
 ```

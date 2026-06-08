@@ -9,7 +9,7 @@ class FunctionTests(unittest.TestCase):
             "A dummy uses numbers. A dummy can calculate. A dummy requires a number to calculate. "
             "When the dummy calculates, if the number equals 1, then the result is 0. "
             "When the dummy calculates, if the number equals 2, then the result is 1. "
-            "When the dummy calculates, if the number is greater than 2, then the result is the sum of calculating (the number minus 1, and calculating (the number minus 2). "
+            "When the dummy calculates, if the number is greater than 2, then the result is the sum of calculating (the number minus 1), and calculating (the number minus 2). "
             "The dummy calculates with 8. What is the result?"
         )
         result = Talk(text)
