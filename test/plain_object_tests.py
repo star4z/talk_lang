@@ -85,3 +85,11 @@ class BasicObjectTests(unittest.TestCase):
     def test_unknown_subject_query(self):
         result = Talk("What is the name of my friend?")
         self.assertEqual("I don't know.\n", str(result))
+
+    def test_unknown_field_query(self):
+        result = Talk("My name is Ben. What is my age?")
+        self.assertEqual("I don't know.\n", str(result))
+
+    def test_adjective_state(self):
+        result = Talk("Ben is tall. Is Ben tall?")
+        self.assertEqual("yes\n", str(result))

@@ -265,6 +265,17 @@ class Talk(Noun):
                     else:
                         result = self[subj].has_a(obj[0])
                         self.print("yes" if result else "no")
+                elif query in (IS, ARE):
+                    subj = self.strip_leading_articles(words[verb_index + 1:verb_index + 2])
+                    obj = self.strip_leading_articles(words[verb_index + 2:])
+                    if not subj or self.uncast(subj[0]) not in self._fields:
+                        self.print("I don't know.")
+                    else:
+                        subject = self[subj[0]]
+                        if obj and (subject.is_a(obj[0]) or subject.has_a(obj[0])):
+                            self.print("yes")
+                        else:
+                            self.print("no")
 
     def resolve_query(self, obj):
         if not obj:
@@ -294,7 +305,8 @@ class Talk(Noun):
             #      return the second token as the referenced object.
             #   3) Otherwise, interpret the phrase as a literal value.
             if self.uncast(obj[0]) in self._fields:
-                return self[obj[0]][obj[1]]
+                subject = self[obj[0]]
+                return subject[obj[1]] if obj[1] in subject else "I don't know."
             return self[obj[1]] if self.uncast(obj[1]) in self._fields else parse_literal(' '.join(obj))
         if len(obj) >= 3 and obj[1].lower() == OF:
             # Queries of the form "<field> of <object>", e.g. "height of Ben" or
@@ -303,9 +315,9 @@ class Talk(Noun):
             target = ' '.join(obj[2:])
             if is_quoted_literal(target) or target.isdigit() or self.is_number_like(target):
                 if field.lower() == 'value':
-                    # Special case for "value of <literal>", which just returns the literal value,
-                    # since it doesn't make sense to have a field called "value" on a literal.
-                    return parse_literal(target)
+                    # Don't treat a query like "value of 'foo'" or "value of 3" as an echo;
+                    # such queries should return an unknown value.
+                    return "I don't know."
                 # If the target is a literal but the field is not "value", then interpret the whole
                 # thing as a literal, since it doesn't make sense to query a field on a literal.
                 return parse_literal(target)
