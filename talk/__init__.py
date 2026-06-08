@@ -76,7 +76,7 @@ def evaluate_expression(tokens):
     expr = ' '.join(tokens)
     node = ast.parse(expr, mode='eval')
     for sub in ast.walk(node):
-        if not isinstance(sub, (ast.Expression, ast.BinOp, ast.UnaryOp, ast.Num, ast.Constant, ast.Add, ast.Sub, ast.Mult, ast.Div, ast.USub, ast.UAdd, ast.Load, ast.Tuple, ast.Call, ast.Name)):
+        if not isinstance(sub, (ast.Expression, ast.BinOp, ast.UnaryOp, ast.Constant, ast.Add, ast.Sub, ast.Mult, ast.Div, ast.USub, ast.UAdd, ast.Load, ast.Tuple, ast.Call, ast.Name)):
             raise ValueError("Unsupported expression")
         if isinstance(sub, ast.Name):
             raise ValueError("Unsupported name in expression")
